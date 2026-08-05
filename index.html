@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CTZ's Flash Garden</title>
+  <meta name="description" content="一个轻量数字花园——闪念、提炼、知识卡片。">
+  <base href="{{BASE}}">
+  <link rel="stylesheet" href="assets/garden.css">
+</head>
+<body>
+  <header>
+    <h1>CTZ's Flash Garden</h1>
+    <p class="subtitle">闪念 · 提炼 · 数字花园</p>
+    <nav class="tag-bar" id="tag-bar"></nav>
+  </header>
+  <main>
+    <div class="card-grid" id="card-grid"></div>
+    <p class="card-count" id="card-count"></p>
+  </main>
+
+  <div class="modal-overlay" id="modal-overlay" hidden>
+    <article class="modal" role="dialog">
+      <button class="modal-close" id="modal-close" aria-label="关闭">&times;</button>
+      <div class="modal-content" id="modal-content"></div>
+    </article>
+  </div>
+
+  <script src="assets/garden.js"></script>
+</body>
+</html>

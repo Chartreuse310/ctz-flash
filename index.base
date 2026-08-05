@@ -1,0 +1,14 @@
+views:
+  - type: cards
+    name: Table
+    filters:
+      and:
+        - file.folder == "notes"
+    order:
+      - title
+      - date
+      - tags
+      - summary
+    sort:
+      - property: file.basename
+        direction: DESC

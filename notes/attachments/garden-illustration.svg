@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" width="400" height="240">
+  <!-- 背景 -->
+  <rect width="400" height="240" fill="#f7f3ea"/>
+  <!-- 太阳 -->
+  <circle cx="330" cy="52" r="28" fill="#f2c14e"/>
+  <!-- 山 -->
+  <path d="M0 200 L120 110 L200 170 L260 130 L400 200 Z" fill="#a8c69f"/>
+  <!-- 草地 -->
+  <rect y="196" width="400" height="44" fill="#7fa878"/>
+  <!-- 小路 -->
+  <path d="M200 240 C 190 210, 210 200, 200 180 C 190 160, 210 150, 200 132" stroke="#d9c9a3" stroke-width="14" fill="none" stroke-linecap="round"/>
+  <!-- 花 -->
+  <g>
+    <line x1="70" y1="200" x2="70" y2="178" stroke="#5f8f5a" stroke-width="3"/>
+    <circle cx="70" cy="172" r="7" fill="#e88b9d"/>
+    <line x1="300" y1="200" x2="300" y2="184" stroke="#5f8f5a" stroke-width="3"/>
+    <circle cx="300" cy="178" r="6" fill="#f2c14e"/>
+    <line x1="340" y1="202" x2="340" y2="188" stroke="#5f8f5a" stroke-width="3"/>
+    <circle cx="340" cy="182" r="5" fill="#9b7ec9"/>
+  </g>
+  <!-- 蝴蝶 -->
+  <g transform="translate(150,70)">
+    <ellipse cx="-8" cy="0" rx="10" ry="7" fill="#e88b9d" transform="rotate(-20)"/>
+    <ellipse cx="8" cy="0" rx="10" ry="7" fill="#e88b9d" transform="rotate(20)"/>
+    <ellipse cx="0" cy="0" rx="1.6" ry="6" fill="#5c4a3d"/>
+  </g>
+  <!-- 文字 -->
+  <text x="20" y="34" font-family="serif" font-size="20" fill="#5c4a3d">CTZ's Garden</text>
+</svg>
