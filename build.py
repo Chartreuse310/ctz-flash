@@ -244,6 +244,16 @@ def main():
         m["content_html"] = content_html
         m["url"] = build_url(m, base)
 
+        # 收集出链（用于关系图谱；基于保护后的正文，避免代码块误判）
+        links = []
+        for mm in WIKI_LINK_RE.finditer(body_protected):
+            raw = mm.group(1).strip()
+            target = raw.partition("|")[0].strip().strip("#").strip()
+            url = name_to_url.get(target)
+            if url and url != m["url"]:
+                links.append(url)
+        m["links"] = links
+
     # 清理输出目录
     if out_dir.exists():
         shutil.rmtree(out_dir)
@@ -273,6 +283,7 @@ def main():
                 "tags": m["tags"],
                 "summary": m["summary"],
                 "url": m["url"],
+                "links": m["links"],
                 "content_html": m["content_html"],
             }
             for m in cards

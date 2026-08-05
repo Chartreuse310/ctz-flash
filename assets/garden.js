@@ -116,6 +116,13 @@
   function renderModal(card) {
     modalContent.innerHTML = '';
 
+    // 两栏布局：正文左 + 图谱右（Obsidian 风格）
+    const layout = document.createElement('div');
+    layout.className = 'modal-layout';
+
+    const main = document.createElement('div');
+    main.className = 'modal-main';
+
     const title = document.createElement('h1');
     title.className = 'modal-title';
     title.textContent = card.title;
@@ -142,9 +149,41 @@
     body.className = 'modal-body';
     body.innerHTML = card.content_html || '';
 
-    modalContent.appendChild(title);
-    modalContent.appendChild(meta);
-    modalContent.appendChild(body);
+    main.appendChild(title);
+    main.appendChild(meta);
+    main.appendChild(body);
+
+    // 右侧面板：上图谱 + 下反链
+    const side = document.createElement('aside');
+    side.className = 'modal-side';
+
+    const graphSection = document.createElement('div');
+    graphSection.className = 'graph-section';
+    const graphTitle = document.createElement('h3');
+    graphTitle.textContent = '图谱';
+    const graphContainer = document.createElement('div');
+    graphContainer.className = 'graph-container';
+    graphSection.appendChild(graphTitle);
+    graphSection.appendChild(graphContainer);
+
+    const backlinksSection = document.createElement('div');
+    backlinksSection.className = 'backlinks-section';
+    const backlinksTitle = document.createElement('h3');
+    backlinksTitle.textContent = '反链';
+    const backlinksList = document.createElement('ul');
+    backlinksList.className = 'backlinks-list';
+    backlinksSection.appendChild(backlinksTitle);
+    backlinksSection.appendChild(backlinksList);
+
+    side.appendChild(graphSection);
+    side.appendChild(backlinksSection);
+
+    layout.appendChild(main);
+    layout.appendChild(side);
+    modalContent.appendChild(layout);
+
+    renderGraph(card, graphContainer);
+    renderBacklinks(card, backlinksList);
 
     // 拦截正文内链接：站内卡片链接 → 模态内切换（花园漫游不出站）
     body.querySelectorAll('a').forEach(a => {
@@ -159,7 +198,155 @@
     });
   }
 
-  function findCardByUrl(href) {
+  /* ---------- Graph ---------- */
+
+  const GRAPH_DEPTH = 2; // 图谱展开深度：1=直接邻居，2=邻居的邻居
+
+  function buildGraphData(card) {
+    const byUrl = new Map(cards.map(c => [c.url, c]));
+
+    // 一级：出链 + 入链
+    const outgoing = (card.links || []).map(u => byUrl.get(u)).filter(Boolean);
+    const incoming = cards.filter(c => (c.links || []).includes(card.url));
+    const level1 = new Map();
+    outgoing.forEach(c => level1.set(c.url, c));
+    incoming.forEach(c => level1.set(c.url, c));
+
+    // 二级：一级节点的邻居
+    const level2 = new Map();
+    if (GRAPH_DEPTH >= 2) {
+      level1.forEach(c => {
+        (c.links || []).forEach(u => {
+          const node = byUrl.get(u);
+          if (node && node.url !== card.url && !level1.has(node.url)) {
+            level2.set(node.url, node);
+          }
+        });
+        cards.forEach(c2 => {
+          if ((c2.links || []).includes(c.url) && c2.url !== card.url && !level1.has(c2.url)) {
+            level2.set(c2.url, c2);
+          }
+        });
+      });
+    }
+
+    const nodes = [
+      { id: card.url, label: card.title, level: 0 },
+      ...[...level1.values()].map(c => ({ id: c.url, label: c.title, level: 1 })),
+      ...[...level2.values()].map(c => ({ id: c.url, label: c.title, level: 2 })),
+    ];
+
+    const nodeUrls = new Set(nodes.map(n => n.id));
+    const edges = [];
+    nodeUrls.forEach(a => {
+      nodeUrls.forEach(b => {
+        if (a === b) return;
+        const cardA = byUrl.get(a);
+        if (cardA && (cardA.links || []).includes(b)) {
+          edges.push({ from: a, to: b });
+        }
+      });
+    });
+
+    return { nodes, edges, counts: { level1: level1.size, level2: level2.size } };
+  }
+
+  function ensureVis() {
+    return new Promise((resolve, reject) => {
+      if (window.vis) return resolve(window.vis);
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/vis-network@9.1.9/standalone/umd/vis-network.min.js';
+      s.onload = () => resolve(window.vis);
+      s.onerror = () => reject(new Error('vis-network 加载失败'));
+      document.head.appendChild(s);
+    });
+  }
+
+  function renderGraph(card, container) {
+    ensureVis()
+      .then(() => {
+        const { nodes, edges, counts } = buildGraphData(card);
+        if (nodes.length <= 1) {
+          container.innerHTML = '<p class="graph-empty">这张卡片还没有与其他卡片相连，去正文里加个 [[链接]] 吧</p>';
+          return;
+        }
+        container.innerHTML = '';
+
+        const visNodes = new vis.DataSet(nodes.map(n => ({
+          id: n.id,
+          label: '',
+          level: n.level,
+          shape: 'dot',
+          size: n.level === 0 ? 10 : n.level === 1 ? 7 : 5,
+          color: n.level === 0
+            ? { background: '#4a7c59', border: '#3a6a49' }
+            : n.level === 1
+              ? { background: '#8ab58c', border: '#4a7c59' }
+              : { background: '#c3d8c4', border: '#8ab58c' },
+          borderWidth: n.level === 0 ? 2 : 1,
+          title: n.label,
+        })));
+
+        const visEdges = new vis.DataSet(edges.map(e => ({
+          from: e.from,
+          to: e.to,
+          color: { color: '#b5cbb5', highlight: '#4a7c59' },
+          width: 1.2,
+          smooth: { enabled: true, type: 'continuous' },
+        })));
+
+        const network = new vis.Network(container, { nodes: visNodes, edges: visEdges }, {
+          physics: {
+            enabled: true,
+            solver: 'forceAtlas2Based',
+            stabilization: true,
+            forceAtlas2Based: { springLength: 70, springConstant: 0.08, avoidOverlap: 0.5 },
+          },
+          interaction: { hover: true, dragNodes: true, zoomView: true, tooltipDelay: 80 },
+          nodes: { scaling: { min: 6, max: 20 } },
+        });
+
+        network.on('click', (params) => {
+          if (params.nodes.length) {
+            const target = findCardByUrl(params.nodes[0]);
+            if (target) {
+              renderModal(target);
+              modal.scrollTop = 0;
+            }
+          }
+        });
+      })
+      .catch(() => {
+        container.innerHTML = '<p class="graph-empty">图谱组件加载失败（需要网络连接）</p>';
+      });
+  }
+
+  /* ---------- Backlinks ---------- */
+
+  function renderBacklinks(card, listEl) {
+    const incoming = cards.filter(c => (c.links || []).includes(card.url));
+    listEl.innerHTML = '';
+
+    if (!incoming.length) {
+      const empty = document.createElement('p');
+      empty.className = 'backlinks-empty';
+      empty.textContent = '暂无其他卡片链接到这里';
+      listEl.appendChild(empty);
+      return;
+    }
+
+    incoming.forEach(c => {
+      const li = document.createElement('li');
+      li.textContent = c.title;
+      li.addEventListener('click', () => {
+        renderModal(c);
+        modal.scrollTop = 0;
+      });
+      listEl.appendChild(li);
+    });
+  }
+
+  function findCardByUrl(url) {
     if (!href) return null;
     const norm = href.split('#')[0];
     return cards.find(c => c.url === norm) || null;
