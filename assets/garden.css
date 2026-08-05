@@ -513,21 +513,30 @@ main {
   line-height: 1.6;
 }
 
-/* ========== Backlinks（反链） ========== */
+/* ========== Links Panel（反链 + 出链 共用滚动） ========== */
 
-.backlinks-section {
+.links-panel {
   margin-top: 16px;
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
-.backlinks-section::-webkit-scrollbar {
+.links-panel::-webkit-scrollbar {
   display: none;
 }
 
-.backlinks-section h3 {
+.links-section {
+  margin-bottom: 16px;
+}
+
+.links-section:last-child {
+  margin-bottom: 0;
+}
+
+.links-section h3 {
   font-family: var(--font-serif);
   font-size: 0.85rem;
   color: var(--text-muted);
@@ -535,13 +544,13 @@ main {
   font-weight: 600;
 }
 
-.backlinks-list {
+.links-list {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.backlinks-list li {
+.links-list li {
   padding: 6px 0;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
@@ -551,15 +560,15 @@ main {
   line-height: 1.4;
 }
 
-.backlinks-list li:last-child {
+.links-list li:last-child {
   border-bottom: none;
 }
 
-.backlinks-list li:hover {
+.links-list li:hover {
   color: var(--accent);
 }
 
-.backlinks-empty {
+.links-empty {
   font-size: 0.8rem;
   color: var(--text-muted);
   padding: 12px 0;

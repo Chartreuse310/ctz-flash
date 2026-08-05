@@ -165,17 +165,32 @@
     graphSection.appendChild(graphTitle);
     graphSection.appendChild(graphContainer);
 
+    // 链接面板：反链 + 出链 共用一个滚动容器
+    const linksPanel = document.createElement('div');
+    linksPanel.className = 'links-panel';
+
     const backlinksSection = document.createElement('div');
-    backlinksSection.className = 'backlinks-section';
+    backlinksSection.className = 'links-section';
     const backlinksTitle = document.createElement('h3');
     backlinksTitle.textContent = '反链';
     const backlinksList = document.createElement('ul');
-    backlinksList.className = 'backlinks-list';
+    backlinksList.className = 'links-list';
     backlinksSection.appendChild(backlinksTitle);
     backlinksSection.appendChild(backlinksList);
+    linksPanel.appendChild(backlinksSection);
+
+    const outlinksSection = document.createElement('div');
+    outlinksSection.className = 'links-section';
+    const outlinksTitle = document.createElement('h3');
+    outlinksTitle.textContent = '出链';
+    const outlinksList = document.createElement('ul');
+    outlinksList.className = 'links-list';
+    outlinksSection.appendChild(outlinksTitle);
+    outlinksSection.appendChild(outlinksList);
+    linksPanel.appendChild(outlinksSection);
 
     side.appendChild(graphSection);
-    side.appendChild(backlinksSection);
+    side.appendChild(linksPanel);
 
     layout.appendChild(main);
     layout.appendChild(side);
@@ -195,6 +210,7 @@
 
     renderGraph(card, graphContainer);
     renderBacklinks(card, backlinksList);
+    renderOutlinks(card, outlinksList);
   }
 
   /* ---------- Graph ---------- */
@@ -328,26 +344,35 @@
       });
   }
 
-  /* ---------- Backlinks ---------- */
+  /* ---------- Links（反链 / 出链） ---------- */
 
   function renderBacklinks(card, listEl) {
     const incoming = cards.filter(c => (c.links || []).includes(card.url));
+    renderLinks(listEl, incoming);
+  }
+
+  function renderOutlinks(card, listEl) {
+    const byUrl = new Map(cards.map(c => [c.url, c]));
+    const outlinks = (card.links || []).map(u => byUrl.get(u)).filter(Boolean);
+    renderLinks(listEl, outlinks);
+  }
+
+  function renderLinks(listEl, items) {
     listEl.innerHTML = '';
 
-    if (!incoming.length) {
+    if (!items.length) {
       const empty = document.createElement('p');
-      empty.className = 'backlinks-empty';
-      empty.textContent = '暂无其他卡片链接到这里';
+      empty.className = 'links-empty';
+      empty.textContent = '——';
       listEl.appendChild(empty);
       return;
     }
 
-    incoming.forEach(c => {
+    items.forEach(c => {
       const li = document.createElement('li');
       li.textContent = c.title;
       li.addEventListener('click', () => {
         renderModal(c);
-        modal.scrollTop = 0;
       });
       listEl.appendChild(li);
     });
