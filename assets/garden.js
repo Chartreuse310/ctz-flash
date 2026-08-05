@@ -129,13 +129,9 @@
 
     const meta = document.createElement('div');
     meta.className = 'modal-meta';
-
-    // 左侧：日期 + 标签
-    const metaLeft = document.createElement('div');
-    metaLeft.className = 'meta-left';
     const dateSpan = document.createElement('span');
     dateSpan.textContent = card.date || '';
-    metaLeft.appendChild(dateSpan);
+    meta.appendChild(dateSpan);
     if (card.tags && card.tags.length) {
       const tags = document.createElement('span');
       tags.className = 'modal-tags';
@@ -144,41 +140,17 @@
         s.textContent = t;
         tags.appendChild(s);
       });
-      metaLeft.appendChild(tags);
+      meta.appendChild(tags);
     }
-    meta.appendChild(metaLeft);
 
-    // 右侧：翻页控件（上箭头 + 页码 + 下箭头）
-    const pager = document.createElement('div');
-    pager.className = 'book-pager';
-    const prevBtn = document.createElement('button');
-    prevBtn.className = 'book-nav book-prev';
-    prevBtn.innerHTML = '&#8593;';
-    prevBtn.title = '上一页';
-    const pageNum = document.createElement('span');
-    pageNum.className = 'book-page-num';
-    const nextBtn = document.createElement('button');
-    nextBtn.className = 'book-nav book-next';
-    nextBtn.innerHTML = '&#8595;';
-    nextBtn.title = '下一页';
-    pager.appendChild(prevBtn);
-    pager.appendChild(pageNum);
-    pager.appendChild(nextBtn);
-    meta.appendChild(pager);
-
-    // ── 书页阅读器 ──
-    const bookViewer = document.createElement('div');
-    bookViewer.className = 'book-viewer';
-
-    const bookPage = document.createElement('div');
-    bookPage.className = 'book-page';
-    bookPage.innerHTML = card.content_html || '';
-
-    bookViewer.appendChild(bookPage);
+    // 正文：直接渲染，滚动阅读
+    const body = document.createElement('div');
+    body.className = 'modal-body';
+    body.innerHTML = card.content_html || '';
 
     main.appendChild(title);
     main.appendChild(meta);
-    main.appendChild(bookViewer);
+    main.appendChild(body);
 
     // ── 右侧侧栏 ──
     const side = document.createElement('aside');
@@ -209,91 +181,21 @@
     layout.appendChild(side);
     modalContent.appendChild(layout);
 
-    // ── 翻页控制（基于 scrollTop，天然适配容器大小） ──
-    let pageHeight = 0;
-    let totalPages = 1;
-    let currentPage = 0;
-    let isPageAnimating = false;
-
-    function recalcPage() {
-      pageHeight = bookPage.clientHeight;
-      totalPages = Math.max(1, Math.ceil(bookPage.scrollHeight / pageHeight));
-      if (currentPage >= totalPages) currentPage = totalPages - 1;
-      pageNum.textContent = totalPages > 1 ? (currentPage + 1) + ' / ' + totalPages : '';
-      prevBtn.style.display = currentPage === 0 ? 'none' : '';
-      nextBtn.style.display = currentPage >= totalPages - 1 ? 'none' : '';
-    }
-
-    function showPage(idx, smooth) {
-      if (isPageAnimating) return;
-      idx = Math.max(0, Math.min(idx, totalPages - 1));
-      if (idx === currentPage) return;
-      currentPage = idx;
-      isPageAnimating = true;
-      bookPage.scrollTo({ top: currentPage * pageHeight, behavior: smooth ? 'smooth' : 'instant' });
-      setTimeout(() => { isPageAnimating = false; }, 300);
-      pageNum.textContent = totalPages > 1 ? (currentPage + 1) + ' / ' + totalPages : '';
-      prevBtn.style.display = currentPage === 0 ? 'none' : '';
-      nextBtn.style.display = currentPage >= totalPages - 1 ? 'none' : '';
-    }
-
-    // 窗口大小变化时重新计算
-    const ro = new ResizeObserver(recalcPage);
-    ro.observe(bookViewer);
-
-    // 延迟一帧初始化（确保布局完成）
-    requestAnimationFrame(() => recalcPage());
-
-    // 箭头按钮
-    prevBtn.addEventListener('click', (e) => { e.stopPropagation(); showPage(currentPage - 1, true); });
-    nextBtn.addEventListener('click', (e) => { e.stopPropagation(); showPage(currentPage + 1, true); });
-
-    // 点击上下区域翻页（排除链接）
-    bookViewer.addEventListener('click', (e) => {
-      const link = e.target.closest('a');
-      if (link) {
-        const target = findCardByUrl(link.getAttribute('href'));
+    // 拦截正文内链接：站内卡片链接 → 模态内切换（花园漫游不出站）
+    body.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', (e) => {
+        const target = findCardByUrl(a.getAttribute('href'));
         if (target) {
           e.preventDefault();
           renderModal(target);
-          return;
         }
-      }
-      if (totalPages <= 1) return;
-      const rect = bookViewer.getBoundingClientRect();
-      const y = e.clientY - rect.top;
-      const h = rect.height;
-      if (y < h * 0.3) showPage(currentPage - 1, true);
-      else if (y > h * 0.7) showPage(currentPage + 1, true);
+      });
     });
 
-    // 触摸上下滑动翻页
-    let touchStartY = 0;
-    bookViewer.addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; });
-    bookViewer.addEventListener('touchend', (e) => {
-      if (totalPages <= 1) return;
-      const diff = touchStartY - e.changedTouches[0].clientY;
-      if (Math.abs(diff) > 40) {
-        showPage(currentPage + (diff > 0 ? 1 : -1), true);
-      }
-    });
-
-    // 键盘上下键翻页（渲染新卡片时移除旧 handler）
-    const keyHandler = (e) => {
-      if (overlay.classList.contains('open')) {
-        if (e.key === 'ArrowUp') showPage(currentPage - 1, true);
-        if (e.key === 'ArrowDown') showPage(currentPage + 1, true);
-      }
-    };
-    if (currentKeyHandler) document.removeEventListener('keydown', currentKeyHandler);
-    currentKeyHandler = keyHandler;
-    document.addEventListener('keydown', keyHandler);
 
     renderGraph(card, graphContainer);
     renderBacklinks(card, backlinksList);
   }
-
-  let currentKeyHandler = null;
 
   /* ---------- Graph ---------- */
 
@@ -450,10 +352,6 @@
   function closeModal() {
     overlay.classList.remove('open');
     document.body.style.overflow = '';
-    if (currentKeyHandler) {
-      document.removeEventListener('keydown', currentKeyHandler);
-      currentKeyHandler = null;
-    }
   }
 
   closeBtn.addEventListener('click', closeModal);
