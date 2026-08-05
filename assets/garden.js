@@ -279,10 +279,6 @@
     ensureVis()
       .then(() => {
         const { nodes, edges } = buildGraphData(card);
-        if (nodes.length <= 1) {
-          container.innerHTML = '<p class="graph-empty">这张卡片还没有与其他卡片相连</p>';
-          return;
-        }
         container.innerHTML = '';
 
         const visNodes = new vis.DataSet(nodes.map(n => ({
