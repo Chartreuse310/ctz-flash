@@ -377,6 +377,12 @@ main {
   line-height: 1.9;
   font-size: 0.95rem;
   color: var(--text);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.modal-body::-webkit-scrollbar {
+  display: none;
 }
 
 .modal-body p {
@@ -513,6 +519,12 @@ main {
   margin-top: 16px;
   flex: 1;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.backlinks-section::-webkit-scrollbar {
+  display: none;
 }
 
 .backlinks-section h3 {
