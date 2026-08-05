@@ -104,7 +104,7 @@
     countEl.textContent = visible.length + ' 张卡片';
   }
 
-  /* ---------- Modal ---------- */
+  /* ---------- Modal: 书页翻页 + 右侧栏 ---------- */
 
   function openModal(card) {
     renderModal(card);
@@ -116,7 +116,7 @@
   function renderModal(card) {
     modalContent.innerHTML = '';
 
-    // 两栏布局：正文左 + 图谱右（Obsidian 风格）
+    // 两栏布局
     const layout = document.createElement('div');
     layout.className = 'modal-layout';
 
@@ -132,7 +132,6 @@
     const dateSpan = document.createElement('span');
     dateSpan.textContent = card.date || '';
     meta.appendChild(dateSpan);
-
     if (card.tags && card.tags.length) {
       const tags = document.createElement('span');
       tags.className = 'modal-tags';
@@ -144,16 +143,34 @@
       meta.appendChild(tags);
     }
 
-    // 正文：构建时已渲染为 HTML
-    const body = document.createElement('div');
-    body.className = 'modal-body';
-    body.innerHTML = card.content_html || '';
+    // ── 书页阅读器 ──
+    const bookViewer = document.createElement('div');
+    bookViewer.className = 'book-viewer';
+
+    const bookPage = document.createElement('div');
+    bookPage.className = 'book-page';
+    bookPage.innerHTML = card.content_html || '';
+
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'book-nav book-prev';
+    prevBtn.innerHTML = '&#8249;'; // ‹
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'book-nav book-next';
+    nextBtn.innerHTML = '&#8250;'; // ›
+
+    const pageNum = document.createElement('div');
+    pageNum.className = 'book-page-num';
+
+    bookViewer.appendChild(prevBtn);
+    bookViewer.appendChild(bookPage);
+    bookViewer.appendChild(nextBtn);
+    bookViewer.appendChild(pageNum);
 
     main.appendChild(title);
     main.appendChild(meta);
-    main.appendChild(body);
+    main.appendChild(bookViewer);
 
-    // 右侧面板：上图谱 + 下反链
+    // ── 右侧侧栏 ──
     const side = document.createElement('aside');
     side.className = 'modal-side';
 
@@ -182,37 +199,105 @@
     layout.appendChild(side);
     modalContent.appendChild(layout);
 
-    renderGraph(card, graphContainer);
-    renderBacklinks(card, backlinksList);
+    // ── 翻页控制（基于 scrollTop，天然适配容器大小） ──
+    let pageHeight = 0;
+    let totalPages = 1;
+    let currentPage = 0;
+    let isPageAnimating = false;
 
-    // 拦截正文内链接：站内卡片链接 → 模态内切换（花园漫游不出站）
-    body.querySelectorAll('a').forEach(a => {
-      a.addEventListener('click', (e) => {
-        const target = findCardByUrl(a.getAttribute('href'));
+    function recalcPage() {
+      pageHeight = bookPage.clientHeight;
+      totalPages = Math.max(1, Math.ceil(bookPage.scrollHeight / pageHeight));
+      if (currentPage >= totalPages) currentPage = totalPages - 1;
+      pageNum.textContent = totalPages > 1 ? (currentPage + 1) + ' / ' + totalPages : '';
+      prevBtn.style.display = currentPage === 0 ? 'none' : '';
+      nextBtn.style.display = currentPage >= totalPages - 1 ? 'none' : '';
+    }
+
+    function showPage(idx, smooth) {
+      if (isPageAnimating) return;
+      idx = Math.max(0, Math.min(idx, totalPages - 1));
+      if (idx === currentPage) return;
+      currentPage = idx;
+      isPageAnimating = true;
+      bookPage.scrollTo({ top: currentPage * pageHeight, behavior: smooth ? 'smooth' : 'instant' });
+      setTimeout(() => { isPageAnimating = false; }, 300);
+      pageNum.textContent = totalPages > 1 ? (currentPage + 1) + ' / ' + totalPages : '';
+      prevBtn.style.display = currentPage === 0 ? 'none' : '';
+      nextBtn.style.display = currentPage >= totalPages - 1 ? 'none' : '';
+    }
+
+    // 窗口大小变化时重新计算
+    const ro = new ResizeObserver(recalcPage);
+    ro.observe(bookViewer);
+
+    // 延迟一帧初始化（确保布局完成）
+    requestAnimationFrame(() => recalcPage());
+
+    // 箭头按钮
+    prevBtn.addEventListener('click', (e) => { e.stopPropagation(); showPage(currentPage - 1, true); });
+    nextBtn.addEventListener('click', (e) => { e.stopPropagation(); showPage(currentPage + 1, true); });
+
+    // 点击左右区域翻页（排除链接）
+    bookViewer.addEventListener('click', (e) => {
+      const link = e.target.closest('a');
+      if (link) {
+        const target = findCardByUrl(link.getAttribute('href'));
         if (target) {
           e.preventDefault();
           renderModal(target);
-          modal.scrollTop = 0;
+          return;
         }
-      });
+      }
+      if (totalPages <= 1) return;
+      const rect = bookViewer.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const w = rect.width;
+      if (x < w * 0.35) showPage(currentPage - 1, true);
+      else if (x > w * 0.65) showPage(currentPage + 1, true);
     });
+
+    // 触摸滑动翻页
+    let touchStartX = 0;
+    bookViewer.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+    bookViewer.addEventListener('touchend', (e) => {
+      if (totalPages <= 1) return;
+      const diff = touchStartX - e.changedTouches[0].clientX;
+      if (Math.abs(diff) > 40) {
+        showPage(currentPage + (diff > 0 ? 1 : -1), true);
+      }
+    });
+
+    // 键盘左右键翻页（渲染新卡片时移除旧 handler）
+    const keyHandler = (e) => {
+      if (overlay.classList.contains('open')) {
+        if (e.key === 'ArrowLeft') showPage(currentPage - 1, true);
+        if (e.key === 'ArrowRight') showPage(currentPage + 1, true);
+      }
+    };
+    if (currentKeyHandler) document.removeEventListener('keydown', currentKeyHandler);
+    currentKeyHandler = keyHandler;
+    document.addEventListener('keydown', keyHandler);
+
+    renderGraph(card, graphContainer);
+    renderBacklinks(card, backlinksList);
   }
+
+  let currentKeyHandler = null;
 
   /* ---------- Graph ---------- */
 
-  const GRAPH_DEPTH = 2; // 图谱展开深度：1=直接邻居，2=邻居的邻居
+  const GRAPH_DEPTH = 2;
 
   function buildGraphData(card) {
     const byUrl = new Map(cards.map(c => [c.url, c]));
 
-    // 一级：出链 + 入链
     const outgoing = (card.links || []).map(u => byUrl.get(u)).filter(Boolean);
     const incoming = cards.filter(c => (c.links || []).includes(card.url));
     const level1 = new Map();
     outgoing.forEach(c => level1.set(c.url, c));
     incoming.forEach(c => level1.set(c.url, c));
 
-    // 二级：一级节点的邻居
     const level2 = new Map();
     if (GRAPH_DEPTH >= 2) {
       level1.forEach(c => {
@@ -265,9 +350,9 @@
   function renderGraph(card, container) {
     ensureVis()
       .then(() => {
-        const { nodes, edges, counts } = buildGraphData(card);
+        const { nodes, edges } = buildGraphData(card);
         if (nodes.length <= 1) {
-          container.innerHTML = '<p class="graph-empty">这张卡片还没有与其他卡片相连，去正文里加个 [[链接]] 吧</p>';
+          container.innerHTML = '<p class="graph-empty">这张卡片还没有与其他卡片相连</p>';
           return;
         }
         container.innerHTML = '';
@@ -317,7 +402,7 @@
         });
       })
       .catch(() => {
-        container.innerHTML = '<p class="graph-empty">图谱组件加载失败（需要网络连接）</p>';
+        container.innerHTML = '<p class="graph-empty">图谱组件加载失败</p>';
       });
   }
 
@@ -347,14 +432,18 @@
   }
 
   function findCardByUrl(url) {
-    if (!href) return null;
-    const norm = href.split('#')[0];
+    if (!url) return null;
+    const norm = url.split('#')[0];
     return cards.find(c => c.url === norm) || null;
   }
 
   function closeModal() {
     overlay.classList.remove('open');
     document.body.style.overflow = '';
+    if (currentKeyHandler) {
+      document.removeEventListener('keydown', currentKeyHandler);
+      currentKeyHandler = null;
+    }
   }
 
   closeBtn.addEventListener('click', closeModal);
