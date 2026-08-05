@@ -275,38 +275,53 @@
     });
   }
 
+  // 节点样式：hover 时高亮（圆点变大变深、文字变不透明）
+  function nodeStyle(level, hovered) {
+    const isCenter = level === 0;
+    const isL1 = level === 1;
+    return {
+      size: (isCenter ? 8 : isL1 ? 6 : 4) + (hovered ? 3 : 0),
+      background: hovered ? '#2f5a3c' : (isCenter ? '#4a7c59' : isL1 ? '#8ab58c' : '#b9cfba'),
+      fontColor: hovered
+        ? 'rgba(44,62,45,1)'
+        : (isCenter ? 'rgba(44,62,45,0.95)' : isL1 ? 'rgba(44,62,45,0.6)' : 'rgba(44,62,45,0.4)'),
+      fontSize: (isCenter ? 12 : 11) + (hovered ? 1 : 0),
+    };
+  }
+
   function renderGraph(card, container) {
     ensureVis()
       .then(() => {
         const { nodes, edges } = buildGraphData(card);
         container.innerHTML = '';
 
-        const visNodes = new vis.DataSet(nodes.map(n => ({
-          id: n.id,
-          label: n.label,
-          shape: 'dot',
-          size: n.level === 0 ? 8 : n.level === 1 ? 6 : 4,
-          color: {
-            background: n.level === 0 ? '#4a7c59' : n.level === 1 ? '#8ab58c' : '#b9cfba',
-            border: 'rgba(0,0,0,0)',
-            highlight: 'rgba(0,0,0,0)',
-            hover: 'rgba(0,0,0,0)',
-          },
-          borderWidth: 0,
-          font: {
-            size: n.level === 0 ? 12 : 11,
-            color: n.level === 0
-              ? 'rgba(44,62,45,0.95)'
-              : n.level === 1
-                ? 'rgba(44,62,45,0.6)'
-                : 'rgba(44,62,45,0.4)',
-            face: 'Georgia, "Noto Serif SC", "Source Han Serif SC", serif',
-            vadjust: 12,
-          },
-          margin: { top: 10, right: 6, bottom: 10, left: 6 },
-        })));
+        const visNodes = new vis.DataSet(nodes.map(n => {
+          const s = nodeStyle(n.level, false);
+          return {
+            id: n.id,
+            label: n.label,
+            shape: 'dot',
+            size: s.size,
+            color: {
+              background: s.background,
+              border: 'rgba(0,0,0,0)',
+              highlight: { background: 'rgba(0,0,0,0)', border: 'rgba(0,0,0,0)' },
+              hover: { background: 'rgba(0,0,0,0)', border: 'rgba(0,0,0,0)' },
+            },
+            borderWidth: 0,
+            font: {
+              size: s.fontSize,
+              color: s.fontColor,
+              face: 'Georgia, "Noto Serif SC", "Source Han Serif SC", serif',
+              vadjust: 12,
+            },
+            margin: { top: 10, right: 6, bottom: 10, left: 6 },
+            level: n.level,
+          };
+        }));
 
-        const visEdges = new vis.DataSet(edges.map(e => ({
+        const visEdges = new vis.DataSet(edges.map((e, i) => ({
+          id: 'e' + i,
           from: e.from,
           to: e.to,
           color: { color: '#b5cbb5', highlight: '#4a7c59' },
@@ -318,11 +333,10 @@
           physics: {
             enabled: true,
             solver: 'forceAtlas2Based',
-            stabilization: true,
+            stabilization: false,
             forceAtlas2Based: { springLength: 90, springConstant: 0.08, avoidOverlap: 0.6 },
           },
           interaction: { hover: false, dragNodes: true, zoomView: true },
-          nodes: { scaling: { min: 6, max: 20 } },
         });
 
         network.on('click', (params) => {
