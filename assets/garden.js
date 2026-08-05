@@ -129,9 +129,13 @@
 
     const meta = document.createElement('div');
     meta.className = 'modal-meta';
+
+    // 左侧：日期 + 标签
+    const metaLeft = document.createElement('div');
+    metaLeft.className = 'meta-left';
     const dateSpan = document.createElement('span');
     dateSpan.textContent = card.date || '';
-    meta.appendChild(dateSpan);
+    metaLeft.appendChild(dateSpan);
     if (card.tags && card.tags.length) {
       const tags = document.createElement('span');
       tags.className = 'modal-tags';
@@ -140,8 +144,27 @@
         s.textContent = t;
         tags.appendChild(s);
       });
-      meta.appendChild(tags);
+      metaLeft.appendChild(tags);
     }
+    meta.appendChild(metaLeft);
+
+    // 右侧：翻页控件（上箭头 + 页码 + 下箭头）
+    const pager = document.createElement('div');
+    pager.className = 'book-pager';
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'book-nav book-prev';
+    prevBtn.innerHTML = '&#8593;';
+    prevBtn.title = '上一页';
+    const pageNum = document.createElement('span');
+    pageNum.className = 'book-page-num';
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'book-nav book-next';
+    nextBtn.innerHTML = '&#8595;';
+    nextBtn.title = '下一页';
+    pager.appendChild(prevBtn);
+    pager.appendChild(pageNum);
+    pager.appendChild(nextBtn);
+    meta.appendChild(pager);
 
     // ── 书页阅读器 ──
     const bookViewer = document.createElement('div');
@@ -151,20 +174,7 @@
     bookPage.className = 'book-page';
     bookPage.innerHTML = card.content_html || '';
 
-    const prevBtn = document.createElement('button');
-    prevBtn.className = 'book-nav book-prev';
-    prevBtn.innerHTML = '&#8249;'; // ‹
-    const nextBtn = document.createElement('button');
-    nextBtn.className = 'book-nav book-next';
-    nextBtn.innerHTML = '&#8250;'; // ›
-
-    const pageNum = document.createElement('div');
-    pageNum.className = 'book-page-num';
-
-    bookViewer.appendChild(prevBtn);
     bookViewer.appendChild(bookPage);
-    bookViewer.appendChild(nextBtn);
-    bookViewer.appendChild(pageNum);
 
     main.appendChild(title);
     main.appendChild(meta);
@@ -238,7 +248,7 @@
     prevBtn.addEventListener('click', (e) => { e.stopPropagation(); showPage(currentPage - 1, true); });
     nextBtn.addEventListener('click', (e) => { e.stopPropagation(); showPage(currentPage + 1, true); });
 
-    // 点击左右区域翻页（排除链接）
+    // 点击上下区域翻页（排除链接）
     bookViewer.addEventListener('click', (e) => {
       const link = e.target.closest('a');
       if (link) {
@@ -251,28 +261,28 @@
       }
       if (totalPages <= 1) return;
       const rect = bookViewer.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const w = rect.width;
-      if (x < w * 0.35) showPage(currentPage - 1, true);
-      else if (x > w * 0.65) showPage(currentPage + 1, true);
+      const y = e.clientY - rect.top;
+      const h = rect.height;
+      if (y < h * 0.3) showPage(currentPage - 1, true);
+      else if (y > h * 0.7) showPage(currentPage + 1, true);
     });
 
-    // 触摸滑动翻页
-    let touchStartX = 0;
-    bookViewer.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+    // 触摸上下滑动翻页
+    let touchStartY = 0;
+    bookViewer.addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; });
     bookViewer.addEventListener('touchend', (e) => {
       if (totalPages <= 1) return;
-      const diff = touchStartX - e.changedTouches[0].clientX;
+      const diff = touchStartY - e.changedTouches[0].clientY;
       if (Math.abs(diff) > 40) {
         showPage(currentPage + (diff > 0 ? 1 : -1), true);
       }
     });
 
-    // 键盘左右键翻页（渲染新卡片时移除旧 handler）
+    // 键盘上下键翻页（渲染新卡片时移除旧 handler）
     const keyHandler = (e) => {
       if (overlay.classList.contains('open')) {
-        if (e.key === 'ArrowLeft') showPage(currentPage - 1, true);
-        if (e.key === 'ArrowRight') showPage(currentPage + 1, true);
+        if (e.key === 'ArrowUp') showPage(currentPage - 1, true);
+        if (e.key === 'ArrowDown') showPage(currentPage + 1, true);
       }
     };
     if (currentKeyHandler) document.removeEventListener('keydown', currentKeyHandler);
