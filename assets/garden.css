@@ -185,11 +185,15 @@ main {
   inset: 0;
   background: rgba(0,0,0,0.4);
   backdrop-filter: blur(4px);
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 24px;
+}
+
+.modal-overlay.open {
+  display: flex;
   animation: fadeIn 0.2s ease;
 }
 

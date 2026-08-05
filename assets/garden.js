@@ -108,7 +108,7 @@
 
   function openModal(card) {
     renderModal(card);
-    overlay.hidden = false;
+    overlay.classList.add('open');
     document.body.style.overflow = 'hidden';
     modal.scrollTop = 0;
   }
@@ -166,7 +166,7 @@
   }
 
   function closeModal() {
-    overlay.hidden = true;
+    overlay.classList.remove('open');
     document.body.style.overflow = '';
   }
 
@@ -175,7 +175,7 @@
     if (e.target === overlay) closeModal();
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !overlay.hidden) closeModal();
+    if (e.key === 'Escape' && overlay.classList.contains('open')) closeModal();
   });
 
   /* ---------- Init ---------- */
