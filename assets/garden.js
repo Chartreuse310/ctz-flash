@@ -271,17 +271,27 @@
 
         const visNodes = new vis.DataSet(nodes.map(n => ({
           id: n.id,
-          label: '',
-          level: n.level,
+          label: n.label,
           shape: 'dot',
-          size: n.level === 0 ? 10 : n.level === 1 ? 7 : 5,
-          color: n.level === 0
-            ? { background: '#4a7c59', border: '#3a6a49' }
-            : n.level === 1
-              ? { background: '#8ab58c', border: '#4a7c59' }
-              : { background: '#c3d8c4', border: '#8ab58c' },
-          borderWidth: n.level === 0 ? 2 : 1,
-          title: n.label,
+          size: n.level === 0 ? 8 : n.level === 1 ? 6 : 4,
+          color: {
+            background: n.level === 0 ? '#4a7c59' : n.level === 1 ? '#8ab58c' : '#b9cfba',
+            border: 'rgba(0,0,0,0)',
+            highlight: 'rgba(0,0,0,0)',
+            hover: 'rgba(0,0,0,0)',
+          },
+          borderWidth: 0,
+          font: {
+            size: n.level === 0 ? 12 : 11,
+            color: n.level === 0
+              ? 'rgba(44,62,45,0.95)'
+              : n.level === 1
+                ? 'rgba(44,62,45,0.6)'
+                : 'rgba(44,62,45,0.4)',
+            face: 'Georgia, "Noto Serif SC", "Source Han Serif SC", serif',
+            vadjust: 12,
+          },
+          margin: { top: 10, right: 6, bottom: 10, left: 6 },
         })));
 
         const visEdges = new vis.DataSet(edges.map(e => ({
@@ -297,9 +307,9 @@
             enabled: true,
             solver: 'forceAtlas2Based',
             stabilization: true,
-            forceAtlas2Based: { springLength: 70, springConstant: 0.08, avoidOverlap: 0.5 },
+            forceAtlas2Based: { springLength: 90, springConstant: 0.08, avoidOverlap: 0.6 },
           },
-          interaction: { hover: true, dragNodes: true, zoomView: true, tooltipDelay: 80 },
+          interaction: { hover: false, dragNodes: true, zoomView: true },
           nodes: { scaling: { min: 6, max: 20 } },
         });
 
